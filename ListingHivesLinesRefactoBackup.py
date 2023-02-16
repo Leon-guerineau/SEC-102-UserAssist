@@ -1,33 +1,7 @@
+from getHivesPathList import getHivesPathList
 import subprocess
 import codecs
 from struct import unpack
-
-"""
-Fonction qui liste les sous clés de la clé de registre UserAssist
-"""
-def getHivesPathList() :
-    # Chemin de la clé de registre UserAssist
-    userAssistPath = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\UserAssist"
-
-    # Commande pour lister les sous clés
-    hivesQuery = subprocess.run(f'reg query "{userAssistPath}"', stdout=subprocess.PIPE, shell=True)
-    hivesQuery = hivesQuery.stdout.splitlines()
-
-    # On parcours, décode et stocke les sous clés résultants de la commande
-    hivesPathList = []
-    for hivePath in hivesQuery :
-        
-        # Conversion d'UTF-8 à une chaine de caractères banale
-        try :
-            decodedHivePath = hivePath.decode('cp1252')
-            if(decodedHivePath != '') :
-                hivesPathList.append(decodedHivePath)
-        except UnicodeError :
-            print('+1 sous clé en erreur de décodage')
-    
-    # On retourne les sous clés
-    return hivesPathList
-
 
 
 """
@@ -54,7 +28,7 @@ def getHiveLines(hivePath) :
             if(decodedLine != '') :
                 hiveLines.append(decodedLine)
         except UnicodeError :
-            print('+1 ligne en erreur de décodage : ', line)
+            print('+1 ligne en erreur de décodage')
             
     # On retourne les lignes
     return hiveLines
@@ -118,6 +92,7 @@ def getProgramPath(line, decoded = True) :
     
     if(decoded) :
         # On retourne le chemin déchiffré en rot13
+        print(codecs.encode(programPath, 'rot13'))
         return codecs.encode(programPath, 'rot13')
     else :
         return programPath
@@ -125,6 +100,7 @@ def getProgramPath(line, decoded = True) :
     
     
 def getData(line, decoded = True) :
+    result = ''
     splittedLine = line.split('    ')
     
     # On retire le premier élément qui est créé par la tabulation en début de ligne
@@ -132,7 +108,11 @@ def getData(line, decoded = True) :
         splittedLine.pop(0)
     data = removeUuid(splittedLine[2])
     byteData = bytes.fromhex(data)
-    print(unpack("I", byteData[4:8])[0], unpack("I", byteData[12:16])[0], unpack("Q", byteData[60:68])[0])
+    result += '		Nombre d\'éxécutions : ' + str(unpack("I", byteData[4:8])[0]) + '\n'
+    result += '		Temps d\'utilisation : ' + str(unpack("I", byteData[12:16])[0]) + '\n'
+    result += '		Date de la dernière éxécution : ' + str(unpack("I", byteData[12:16])[0]) + '\n'
+    return result
+    # print(unpack("I", byteData[4:8])[0], unpack("I", byteData[12:16])[0], unpack("Q", byteData[60:68])[0])
 
 """
 Programme Pricipal
@@ -149,14 +129,14 @@ for hivePath in hivesPathList :
     if(len(hiveLines) != 0) :
         
         # Ajout du chemin de la sous clé
-        encodedData.append(hivePath)
-        decodedData.append(hivePath)
+        encodedData.append(hivePath+'\n')
+        decodedData.append(hivePath+'\n')
         
         # Ajout des liens de programmes
         for line in hiveLines :
-            getData(line)
             encodedData.append('	'+getProgramPath(line, False))
             decodedData.append('	'+getProgramPath(line))
+            decodedData.append(getData(line))
         
         # Ajout d'une ligne pour faire un saut de ligne
         encodedData.append('')
