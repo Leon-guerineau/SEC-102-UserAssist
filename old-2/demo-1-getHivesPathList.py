@@ -1,6 +1,3 @@
-"""
-Demo 1 : Listing des sous clés de la clé de registre UserAssist
-"""
 # import des fonctions
 from UserAssistFunctions import *
 

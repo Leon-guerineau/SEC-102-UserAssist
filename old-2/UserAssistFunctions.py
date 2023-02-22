@@ -1,4 +1,19 @@
 import subprocess
+import codecs
+
+"""
+Enregistre les données non déchiffrés de la clé de registre dans le fichier userassist.txt
+"""
+def getUserAssistFile() :
+    # Chemin de la clé de registre UserAssist
+    userAssistPath = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\UserAssist"
+
+    # Commande pour lister les sous clés et leurs données (/s)
+    userAssistQuery = subprocess.run(f'reg query "{userAssistPath}" /s', stdout=subprocess.PIPE, shell=True)
+
+    # Écriture des données dans le fichier userassist.txt
+    with open("userassist.txt", "wb") as file:
+        file.write(userAssistQuery.stdout)
 
 
 
@@ -48,7 +63,7 @@ def getHiveLines(hivePath) :
     hiveLines = []
     for line in linesQuery :
         
-        # Conversion de cp1252 à une chaine de caractères banale
+        # Conversion de cp1252 à une chaîne de caractères banale
         try :
             decodedLine = line.decode('cp1252')
             if(decodedLine != '') :
@@ -72,7 +87,7 @@ def getUuid(inputStr) :
     result = ''
     for char in inputStr :
         
-        # Si le caractère est { alors ce caratère et les caratères suivant font partie de l'uuid
+        # Si le caractère est { alors ce caractère et les caractères suivant font partie de l'uuid
         if (char == '{') :
             isUuid = True
             
@@ -80,9 +95,30 @@ def getUuid(inputStr) :
         if(isUuid) :
             result += char
             
-        # Si le caractère est } alors les caratères suivant ne font pas partie de l'uuid
+        # Si le caractère est } alors les caractères suivant ne font pas partie de l'uuid
         if (char == '}') :
             isUuid = False
             
     # On retourne l'uuid ou une chaine vide
     return result
+
+
+"""
+Fonction qui retourne le chemin d'un logiciel décodé en ROT13 pour une ligne donnée
+    - line : la ligne au format '    (chemin)    (type)    (données)'
+"""
+def getDecodedProgramPath(line) :
+
+    # On récupère le chemin encodé et son uuid
+    encodedProgramPath = line.split('    ')[0]
+    uuid = getUuid(encodedProgramPath)
+
+    # S'il y a un uuid alors on le retire
+    if(uuid != '') :
+        encodedProgramPath = encodedProgramPath.replace(uuid, '')
+
+    # On retourne l'uuid suivi du chemin décodé en ROT13
+    return uuid + codecs.encode(encodedProgramPath, 'rot13')
+
+# def getDecodedLineData(line) :
+

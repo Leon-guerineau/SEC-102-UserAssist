@@ -9,6 +9,11 @@ for hivePath in hivesPathList :
     hiveLines = getHiveLines(hivePath)
     if(len(hiveLines) != 0) :
         for line in hiveLines :
-            
+
+            # On divise la ligne et on récupère les données utiles
+            splittedLine = line.split('    ')
+            programPath = splittedLine[0]
+            programUsageData = splittedLine[2]
+
             # On affiche la ligne
-            print(hivePath)
+            print(getDecodedProgramPath(programPath))
