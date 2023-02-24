@@ -99,9 +99,9 @@ def getDecodedData(encodedStats) :
     byteData = bytes.fromhex(encodedStats)
 
     # Lectures des octets représentants les données
-    nbUses = str(struct.unpack("I", byteData[4:8])[0])
-    timeFocus = getFormattedFocusTime(struct.unpack("I", byteData[12:16])[0])
-    lasTimeUsed = getFormattedDateTime(struct.unpack("Q", byteData[60:68])[0])
+    nbUses = str(struct.unpack('I', byteData[4:8])[0])
+    timeFocus = getFormattedFocusTime(struct.unpack('I', byteData[12:16])[0])
+    lasTimeUsed = getFormattedDateTime(struct.unpack('Q', byteData[60:68])[0])
 
     # Retour des données déchiffrées sus forme de tableau
     return {'nbUses': nbUses, 'timeFocus': timeFocus, 'lasTimeUsed': lasTimeUsed}
@@ -151,35 +151,32 @@ def generateEncodedUserAssistFile() :
         file.write(userAssistQuery.stdout)
 
 """
-Génère le fichier 'decode_userassist.txt' contenant les valeurs déchiffrées du fichier 'userassist.txt'
+Programme Principal
 """
-def generateDecodedUserAssistFile() :
 
-    # Génération du fichier 'userassist.txt'
-    generateEncodedUserAssistFile()
+# Génération du fichier 'userassist.txt'
+generateEncodedUserAssistFile()
 
-    # Overture de 'userassist.txt' en lecture et de 'decode_userassist.txt' en écriture
-    with open('userassist.txt', 'r') as inputFile, open('decode_userassist.txt', 'wb') as outputFile :
+# Overture de 'userassist.txt' en lecture et de 'decode_userassist.txt' en écriture
+with open('userassist.txt', 'r') as inputFile, open('decode_userassist.txt', 'wb') as outputFile :
 
-        # Parcours des lignes du fichier 'userassist.txt'
-        for line in inputFile :
+    # Parcours des lignes du fichier 'userassist.txt'
+    for line in inputFile :
 
-            # Détermine le nombre d'espaces présents au début de la ligne
-            nbStartSpaces = len(re.findall(' ', line[:4]))
+        # Détermine le nombre d'espaces présents au début de la ligne
+        nbStartSpaces = len(re.findall(' ', line[:4]))
 
-            # Suppression retour à la ligne '\n' et de de l'indentation '    ' s'il y en a
-            line = line[nbStartSpaces:].strip('\n')
+        # Suppression retour à la ligne '\n' et de de l'indentation '    ' s'il y en a
+        line = line[nbStartSpaces:].strip('\n')
 
-            # Traitement du nom de la ruche et exclusion du nom du répertoire '\Count'
-            if 'KEY_CURRENT_USER' in line and '}\Count' not in line :
-                outputFile.write((line + '\n').encode('utf-8'))
+        # Traitement du nom de la ruche et exclusion du nom du répertoire '\Count'
+        if 'KEY_CURRENT_USER' in line and '}\Count' not in line :
+            outputFile.write((line + '\n').encode('utf-8'))
 
-            # Traitement de la ligne de version
-            elif 'REG_DWORD' in line :
-                outputFile.write(getHiveVersion(line).encode('utf-8'))
+        # Traitement de la ligne de version
+        elif 'REG_DWORD' in line :
+            outputFile.write(getHiveVersion(line).encode('utf-8'))
 
-            # Traitement de la ligne de données
-            elif 'REG_BINARY' in line :
-                outputFile.write(getHiveData(line).encode('utf-8'))
-
-generateDecodedUserAssistFile()
+        # Traitement de la ligne de données
+        elif 'REG_BINARY' in line :
+            outputFile.write(getHiveData(line).encode('utf-8'))
