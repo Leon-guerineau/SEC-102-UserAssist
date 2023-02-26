@@ -20,7 +20,7 @@ Génère le fichier 'userassist.txt' contenant les valeurs de la clé de registr
 """
 def generateEncodedUserAssistFile() :
 
-    # La commande pour lister les données de la clé de registre de façon recursive '/s'
+    # La commande pour lister les données de la clé de registre de façon récursive '/s'
     # Le premier \ dans \\ permet d'ajouter le deuxième sans qu'il soit en caractère d'échappement
     userAssistQuery = 'reg query HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\UserAssist /s'
 
@@ -31,7 +31,7 @@ def generateEncodedUserAssistFile() :
     #   - 'open()' écrase le fichier existant
     with open('userassist.txt', 'wb') as file :
 
-        # '.stdout' permet de récupéré le flux de sortie de la commande exécutée via le module 'subprocess'
+        # '.stdout' permet de récupérer le flux de sortie de la commande exécutée via le module 'subprocess'
         file.write(userAssistQuery.stdout)
 
 
@@ -97,7 +97,7 @@ def getFormattedFocusTime(focusTime) :
 
 
 """
-Convertis une durée depuis la date de référence su système Windows en date
+Convertit une durée depuis la date de référence du système Windows en date
     - intDateTime : le nombre de centième de seconde depuis la date de référence
 """
 def getFormattedDateTime(intDateTime) :
