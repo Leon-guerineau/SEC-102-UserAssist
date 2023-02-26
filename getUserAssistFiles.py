@@ -16,6 +16,27 @@ import re
 
 
 """
+Génère le fichier 'userassist.txt' contenant les valeurs de la clé de registre UserAssist
+"""
+def generateEncodedUserAssistFile() :
+
+    # La commande pour lister les données de la clé de registre de façon recursive '/s'
+    # Le premier \ dans \\ permet d'ajouter le deuxième sans qu'il soit en caractère d'échappement
+    userAssistQuery = 'reg query HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\UserAssist /s'
+
+    # Exécution de la commande
+    userAssistQuery = subprocess.run(userAssistQuery, stdout=subprocess.PIPE, shell=True)
+
+    # Écriture des lignes résultantes de la commande dans le fichier userassist.txt
+    #   - 'open()' écrase le fichier existant
+    with open('userassist.txt', 'wb') as file :
+
+        # '.stdout' permet de récupéré le flux de sortie de la commande exécutée via le module 'subprocess'
+        file.write(userAssistQuery.stdout)
+
+
+
+"""
 Déchiffre et retourne la version de la ruche dans la ligne donnée
     - inputLine :
 """
@@ -29,6 +50,28 @@ def getHiveVersion(inputLine) :
 
     # Retour de la ligne
     return '\tVersion : ' + str(version) + '\n\n'
+
+
+
+"""
+Retourne le chemin d'un logiciel décodé en ROT13 pour une ligne donnée
+    - encodedProgramPath : le chemin d'un logiciel pouvant contenir un {uuid}
+"""
+def getDecodedProgramPath(encodedProgramPath) :
+
+    # Recherche de l'uuid
+    uuidQueryResult = re.findall('\{.*?\}', encodedProgramPath)
+    uuid = uuidQueryResult[0] if uuidQueryResult else ''
+
+    # Isolation du chemin à décoder
+    encodedProgramPath = re.sub('\{.*?\}', '', encodedProgramPath)
+
+    # Assemblage de l'uuid suivi du chemin décodé en ROT13
+    decodedProgramPath = uuid + codecs.encode(encodedProgramPath, 'rot13')
+
+    return '\t\tChemin du fichier : ' + decodedProgramPath + '\n'
+
+
 
 """
 Décompose un nombre de millisecondes donné en h, m, s, ms
@@ -50,6 +93,8 @@ def getFormattedFocusTime(focusTime) :
 
     # Retour de la durée
     return str(hours + 'h, ' + minutes + 'm, ' + seconds + 's, ' + milliseconds + 'ms')
+
+
 
 """
 Convertis une durée depuis la date de référence su système Windows en date
@@ -73,29 +118,15 @@ def getFormattedDateTime(intDateTime) :
     # Retour de la ligne
     return str(resultDate)
 
-"""
-Retourne le chemin d'un logiciel décodé en ROT13 pour une ligne donnée
-    - encodedProgramPath : le chemin d'un logiciel pouvant contenir un {uuid}
-"""
-def getDecodedProgramPath(encodedProgramPath) :
 
-    # Recherche de l'uuid
-    uuidQueryResult = re.findall('\{.*?\}', encodedProgramPath)
-    uuid = uuidQueryResult[0] if uuidQueryResult else ''
-
-    # Isolation du chemin à décoder
-    encodedProgramPath = re.sub('\{.*?\}', '', encodedProgramPath)
-
-    # On retourne l'uuid suivi du chemin décodé en ROT13
-    return uuid + codecs.encode(encodedProgramPath, 'rot13')
 
 """
 Déchiffre et retourne les statistiques d'utilisation données
     - encodedStats : Les statistiques chiffrées en hexadécimal
 """
-def getDecodedData(encodedStats) :
+def getDecodedProgramStats(encodedStats) :
 
-    # Conversion des statistiques en décimal
+    # Découpage en octets
     byteData = bytes.fromhex(encodedStats)
 
     # Lectures des octets représentants les données
@@ -103,14 +134,21 @@ def getDecodedData(encodedStats) :
     timeFocus = getFormattedFocusTime(struct.unpack('I', byteData[12:16])[0])
     lasTimeUsed = getFormattedDateTime(struct.unpack('Q', byteData[60:68])[0])
 
-    # Retour des données déchiffrées sus forme de tableau
-    return {'nbUses': nbUses, 'timeFocus': timeFocus, 'lasTimeUsed': lasTimeUsed}
+    # Mise en forme des lignes
+    programStatsLines = '\t\tNombre d\'exécutions sur la session : ' + nbUses + '\n'
+    programStatsLines += '\t\tTemps d\'utilisation sur la session : ' + timeFocus + '\n'
+    programStatsLines += '\t\tDernière utilisation : ' + lasTimeUsed + '\n\n'
+
+    # Retour des lignes
+    return programStatsLines
+
+
 
 """
-Déchiffre et retourne les différentes données présentes dans la ligne donnée
+Déchiffre et retourne les différentes données présentes dans la ligne données d'un logiciel
     - inputLine : la ligne au format '(chemin)    (type de chiffrement)    (données)'
 """
-def getHiveData(inputLine) :
+def getProgramData(inputLine) :
 
     # Division des données de la ligne :
     #   [0] : chemin du logiciel
@@ -120,35 +158,12 @@ def getHiveData(inputLine) :
 
     # Déchiffrage du chemin du logiciel et de ces statistiques d'utilisation
     programPath = getDecodedProgramPath(encodedData[0])
-    useStats = getDecodedData(encodedData[2])
-
-    # Mise en forme des lignes
-    result = '\t\tChemin du fichier : ' + programPath + '\n'
-    result += '\t\tNombre d\'exécutions : ' + useStats['nbUses'] + '\n'
-    result += '\t\tTemps d\'utilisation : ' + useStats['timeFocus'] + '\n'
-    result += '\t\tDernière utilisation : ' + useStats['lasTimeUsed'] + '\n\n'
+    programStats = getDecodedProgramStats(encodedData[2])
 
     # Retour des lignes
-    return result
+    return programPath + programStats
 
-"""
-Génère le fichier 'userassist.txt' contenant les valeurs de la clé de registre UserAssist
-"""
-def generateEncodedUserAssistFile() :
 
-    # La commande pour lister les données de la clé de registre de façon recursive '/s'
-    # Le premier \ dans \\ permet d'ajouter le deuxième sans qu'il soit en caractère d'échappement
-    userAssistQuery = 'reg query HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\UserAssist /s'
-
-    # Exécution de la commande
-    userAssistQuery = subprocess.run(userAssistQuery, stdout=subprocess.PIPE, shell=True)
-
-    # Écriture des lignes résultantes de la commande dans le fichier userassist.txt
-    #   - 'open()' écrase le fichier existant
-    with open('userassist.txt', 'wb') as file :
-
-        # '.stdout' permet de récupéré le flux de sortie de la commande exécutée via le module 'subprocess'
-        file.write(userAssistQuery.stdout)
 
 """
 Programme Principal
@@ -157,7 +172,7 @@ Programme Principal
 # Génération du fichier 'userassist.txt'
 generateEncodedUserAssistFile()
 
-# Overture de 'userassist.txt' en lecture et de 'decode_userassist.txt' en écriture
+# Ouverture de 'userassist.txt' en lecture et de 'decode_userassist.txt' en écriture
 with open('userassist.txt', 'r') as inputFile, open('decode_userassist.txt', 'wb') as outputFile :
 
     # Parcours des lignes du fichier 'userassist.txt'
@@ -173,10 +188,10 @@ with open('userassist.txt', 'r') as inputFile, open('decode_userassist.txt', 'wb
         if 'KEY_CURRENT_USER' in line and '}\Count' not in line :
             outputFile.write((line + '\n').encode('utf-8'))
 
-        # Traitement de la ligne de version
+        # Traitement de la ligne de version de la ruche
         elif 'REG_DWORD' in line :
             outputFile.write(getHiveVersion(line).encode('utf-8'))
 
-        # Traitement de la ligne de données
+        # Traitement de la ligne de données d'un logiciel
         elif 'REG_BINARY' in line :
-            outputFile.write(getHiveData(line).encode('utf-8'))
+            outputFile.write(getProgramData(line).encode('utf-8'))
